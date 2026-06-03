@@ -1,32 +1,106 @@
+<div align="center">
+
 # bouncer 🚪
 
-A config-driven Discord bot for conference attendee verification. Verify tickets via [Tito](https://ti.to), assign Discord roles, and let attendees create trip/event channels — all driven by a single YAML config file.
+**Config-driven Discord bot for conference attendee verification.**
 
-Built for multi-year conferences. Adding a new year means adding a YAML block, not writing code.
+</div>
 
-## How it works
+bouncer reads a YAML config file to register slash commands, verify tickets against a provider (like Tito), and assign Discord roles. Add a new year or event by adding a YAML block — no code changes needed.
 
-1. Attendee joins your Discord server and receives a welcome DM with instructions
-2. They run `/join_YYYY` in your instructions channel with their ticket email and reference
-3. Bouncer validates the ticket against Tito and assigns the appropriate Discord role
-4. Attendees with a trip-enabled year can run `/make_trip_YYYY` to create community trip/event channels
+```
+$ /join_2027
 
-## Setup
+  Checking your ticket...
+  ✓ Successfully joined RubyConf 2027 channels! Welcome, speaker!
+```
 
-### 1. Create a Discord bot
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+- [Config Reference](#config-reference)
+  - [conference](#conference)
+  - [commands](#commands)
+  - [verify](#verify)
+  - [roles](#roles)
+- [Slash Commands](#slash-commands)
+- [Environment Variables](#environment-variables)
+- [Deploying to Fly.io](#deploying-to-flyio)
+- [Adding a New Year](#adding-a-new-year)
+- [Forking for Your Conference](#forking-for-your-conference)
+
+---
+
+## Quick Start
+
+**1. Create a Discord bot**
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
-2. Create a new application and add a bot
-3. Enable these **Privileged Gateway Intents**: Server Members, Message Content
-4. Invite the bot to your server with `bot` and `applications.commands` scopes and `Manage Roles`, `Manage Channels`, `Send Messages` permissions
+2. Create a new application → **Bot** tab → copy the token
+3. Enable **Privileged Gateway Intents**: Server Members, Message Content
+4. Under **OAuth2 → URL Generator**, select scope `bot` + `applications.commands` with permissions: `Manage Roles`, `Manage Channels`, `Send Messages`
+5. Open the generated URL and invite the bot to your server
 
-### 2. Configure bouncer
+> **Important:** The bot's role must be positioned **above** any roles it manages in your server's role hierarchy.
 
-Copy the example config and fill in your values:
+**2. Configure bouncer**
 
 ```bash
 cp bouncer.example.yml bouncer.yml
 ```
+
+Fill in your Discord role IDs, Tito slug, and conference name.
+
+**3. Set environment variables**
+
+```bash
+cp .env.example .env
+```
+
+```sh
+DISCORD_BOT_TOKEN=your_bot_token
+DISCORD_CLIENT_ID=your_client_id
+DISCORD_GUILD_ID=your_guild_id
+TITO_SECRET=your_tito_api_token
+```
+
+**4. Run**
+
+```bash
+bundle install
+ruby bot.rb
+```
+
+---
+
+## How It Works
+
+1. Attendee joins your Discord server and receives a welcome DM with instructions
+2. They run `/join_YYYY` in your `#instructions` channel with their ticket email and reference number
+3. bouncer validates the ticket against the configured provider (e.g. Tito)
+4. The ticket's release title is matched against `release_types` to determine the role
+5. The attendee receives their role and can access the conference channels
+
+```
+attendee runs /join_2027
+       │
+       ▼
+  verify ticket (Tito API)
+       │
+       ├── not found → "Invalid ticket"
+       │
+       └── found → match release title → assign role
+                                       └── is_speaker? → also assign speaker role
+```
+
+bouncer also auto-deletes non-admin messages posted directly in the instructions channel, keeping it clean.
+
+---
+
+## Config Reference
 
 ```yaml
 conference:
@@ -34,86 +108,166 @@ conference:
   code_of_conduct_url: "https://myconference.com/code-of-conduct"
   instructions_channel: "instructions"
 
-ticketing:
+commands:
+  - name: join_2027
+    description: "Join 2027 conference channels"
+    verify:
+      provider: tito
+      slug: "my-conference"
+      year: "2027"
+      release_types:
+        stream: "Live Streaming"
+        speaker: "Speaker"
+    roles:
+      default: "ATTENDEE_ROLE_ID"
+      stream: "STREAM_ROLE_ID"
+      speaker: "SPEAKER_ROLE_ID"
+```
+
+---
+
+### `conference`
+
+Top-level conference metadata.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | yes | Conference name, used in welcome messages |
+| `code_of_conduct_url` | no | Included in the welcome DM if set |
+| `instructions_channel` | no | Channel name to guard (default: `"instructions"`) |
+
+---
+
+### `commands`
+
+Array of slash commands to register. Each entry becomes one `/name` command in Discord.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | yes | Slash command name (e.g. `join_2027`) |
+| `description` | no | Shown in the Discord command picker |
+| `verify` | yes | Verification provider config (see below) |
+| `roles` | yes | Role IDs to assign based on ticket type |
+
+---
+
+### `verify`
+
+Per-command verification config. The `provider` field selects the backend.
+
+#### Tito
+
+```yaml
+verify:
   provider: tito
-  tito_slug: "my-conference"        # your Tito account/event slug
+  slug: "my-conference"    # your Tito account slug
+  year: "2027"             # the Tito event slug (usually the year)
   release_types:
-    speaker: "Speaker"              # substring match in release title
-    stream: "Live Streaming"        # substring match in release title
-
-years:
-  - year: 2027
-    active: true                    # registers /join_2027 slash command
-    trips_enabled: true             # also registers /make_trip_2027
-    roles:
-      attendee: "111222333444555"
-      stream: "222333444555666"
-      speaker: "333444555666777"
-    trips_category_id: "444555666777888"
-
-  - year: 2026
-    active: true
-    trips_enabled: false
-    roles:
-      attendee: "..."
-      stream: "..."
-      speaker: "..."
+    stream: "Live Streaming"   # substring match in release title → :stream type
+    speaker: "Speaker"         # substring match → sets is_speaker: true
 ```
 
-`bouncer.yml` is gitignored — keep your Discord IDs out of version control.
+| Field | Description |
+|-------|-------------|
+| `provider` | `tito` |
+| `slug` | Tito account/org slug |
+| `year` | Tito event slug |
+| `release_types` | Map of type name → release title substring. The special key `speaker` sets an extra speaker role flag rather than changing the primary type. |
 
-### 3. Set environment variables
+The `ticket_reference` input accepts both `ABCD` and `ABCD-2` formats. If no `-N` suffix is provided, `-1` is appended automatically.
 
-Copy `.env.example` to `.env` and fill in your values:
+---
 
+### `roles`
+
+Discord role IDs to assign based on the verified ticket type.
+
+```yaml
+roles:
+  default: "111222333444555"    # assigned to all verified attendees
+  stream: "222333444555666"     # assigned when ticket type matches "stream" release_type
+  speaker: "333444555666777"    # assigned in addition to primary role when is_speaker
 ```
-DISCORD_BOT_TOKEN=your_bot_token
-DISCORD_CLIENT_ID=your_client_id
-DISCORD_GUILD_ID=your_guild_id
-TITO_SECRET=your_tito_api_token
-```
 
-### 4. Run the bot
+| Key | Description |
+|-----|-------------|
+| `default` | Fallback role — always assigned if no other type matches |
+| *(any release_type key)* | Assigned when the ticket's release title matches that type |
+| `speaker` | Assigned in addition to the primary role when the ticket is a speaker ticket |
 
-```bash
-bundle install
-ruby bot.rb
-```
+---
+
+## Slash Commands
+
+Each entry in `commands` registers one slash command with two inputs:
+
+| Input | Description |
+|-------|-------------|
+| `ticket_purchase_email` | The email address used to buy the ticket |
+| `ticket_reference` | The ticket reference number (e.g. `ABCD` or `ABCD-2`) |
+
+Responses are ephemeral — only the attendee sees them.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DISCORD_BOT_TOKEN` | yes | Bot token from the Developer Portal |
+| `DISCORD_CLIENT_ID` | yes | Application client ID |
+| `DISCORD_GUILD_ID` | yes | Discord server (guild) ID |
+| `TITO_SECRET` | yes (Tito) | Tito API token |
+| `BOUNCER_CONFIG` | no | Path to config file (default: `bouncer.yml`) |
+
+---
 
 ## Deploying to Fly.io
 
 ```bash
 fly launch
-fly secrets set DISCORD_BOT_TOKEN=xxx DISCORD_CLIENT_ID=xxx DISCORD_GUILD_ID=xxx TITO_SECRET=xxx
+fly secrets set \
+  DISCORD_BOT_TOKEN=xxx \
+  DISCORD_CLIENT_ID=xxx \
+  DISCORD_GUILD_ID=xxx \
+  TITO_SECRET=xxx
 ```
 
-Since `bouncer.yml` is gitignored, set it as a secret or mount it as a file on your Fly machine.
+`bouncer.yml` is gitignored. Mount it as a file or pass its contents as a secret on your Fly machine.
 
-## Slash commands
+---
 
-| Command | Description |
-|---------|-------------|
-| `/join_YYYY` | Verify a Tito ticket and get your role for that year |
-| `/make_trip_YYYY` | Create a community trip or event channel (if `trips_enabled: true`) |
+## Adding a New Year
 
-## Adding a new year
-
-Just add a block to `bouncer.yml`:
+Add a block to `bouncer.yml` and restart the bot. The slash command is registered automatically.
 
 ```yaml
-years:
-  - year: 2028
-    active: true
-    trips_enabled: true
+commands:
+  - name: join_2028
+    description: "Join 2028 conference channels"
+    verify:
+      provider: tito
+      slug: "my-conference"
+      year: "2028"
+      release_types:
+        stream: "Live Streaming"
+        speaker: "Speaker"
     roles:
-      attendee: "..."
-      stream: "..."
-      speaker: "..."
-    trips_category_id: "..."
+      default: "ATTENDEE_ROLE_ID_2028"
+      stream: "STREAM_ROLE_ID_2028"
+      speaker: "SPEAKER_ROLE_ID_2028"
 ```
 
-Restart the bot and the `/join_2028` and `/make_trip_2028` commands are registered automatically.
+---
 
-## Real-world example
+## Forking for Your Conference
+
+bouncer is designed to be forked. The core handles ticket verification and role assignment. Conference-specific features (trip channels, custom commands, year-specific logic) live in your fork.
 
 [Deep Dish Swift](https://deepdishswift.com) uses bouncer for their annual iOS conference Discord. Check out [deep-dish-discord-bot](https://github.com/joshdholtz/deep-dish-discord-bot) to see a fully configured fork.
+
+---
+
+## License
+
+MIT
