@@ -1,0 +1,30 @@
+conference:
+  name: "My Conference"
+  code_of_conduct_url: "https://myconference.com/code-of-conduct"
+  instructions_channel: "instructions"
+
+ticketing:
+  provider: tito
+  tito_slug: "my-conference"
+  # How to detect ticket types from release titles (case-insensitive substring match)
+  release_types:
+    speaker: "Speaker"
+    stream: "Live Streaming"
+
+years:
+  - year: 2027
+    active: true          # registers /join_YYYY and /make_trip_YYYY slash commands
+    trips_enabled: true   # enables /make_trip_YYYY command
+    roles:
+      attendee: "DISCORD_ROLE_ID_HERE"
+      stream: "DISCORD_STREAM_ROLE_ID_HERE"
+      speaker: "DISCORD_SPEAKER_ROLE_ID_HERE"
+    trips_category_id: "DISCORD_TRIPS_CATEGORY_ID_HERE"
+
+  - year: 2026
+    active: true
+    trips_enabled: false
+    roles:
+      attendee: "DISCORD_ROLE_ID_HERE"
+      stream: "DISCORD_STREAM_ROLE_ID_HERE"
+      speaker: "DISCORD_SPEAKER_ROLE_ID_HERE"
