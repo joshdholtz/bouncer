@@ -1,13 +1,12 @@
-FROM ruby:3.2
+FROM ruby:3.3-slim
+
+RUN apt-get update -qq && apt-get install -y build-essential libssl-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY Gemfile* ./
-RUN bundle install
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --without development test
 
 COPY . .
 
 CMD ["ruby", "bot.rb"]
-
-ENV RACK_ENV=production
-ENV NO_RACK=true

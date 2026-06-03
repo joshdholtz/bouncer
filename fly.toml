@@ -1,3 +1,14 @@
 app = 'your-bouncer-bot'
-kill_signal = "SIGINT"
-kill_timeout = 5
+primary_region = 'ord'
+kill_signal = 'SIGINT'
+kill_timeout = '5s'
+
+[build]
+
+[env]
+  BOUNCER_CONFIG = '/app/bouncer.yml'
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1

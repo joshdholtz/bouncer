@@ -28,7 +28,11 @@ $ /join_2027
   - [roles](#roles)
 - [Slash Commands](#slash-commands)
 - [Environment Variables](#environment-variables)
-- [Deploying to Fly.io](#deploying-to-flyio)
+- [Deploying](#deploying)
+  - [Fly.io](#flyio)
+  - [Railway](#railway)
+  - [Render](#render)
+  - [Docker](#docker)
 - [Adding a New Year](#adding-a-new-year)
 - [Forking for Your Conference](#forking-for-your-conference)
 
@@ -222,10 +226,27 @@ Responses are ephemeral — only the attendee sees them.
 
 ---
 
-## Deploying to Fly.io
+## Deploying
+
+bouncer is a long-running process with no HTTP server. Any platform that can run a Docker container or a background worker works.
+
+`bouncer.yml` is gitignored — it contains your Discord role IDs. Each platform section below explains how to get it onto your host.
+
+---
+
+### Fly.io
+
+**1. Launch**
 
 ```bash
-fly launch
+fly launch --no-deploy
+```
+
+Edit the generated `fly.toml` — set `app` to your app name and `primary_region` to your preferred region.
+
+**2. Set secrets**
+
+```bash
 fly secrets set \
   DISCORD_BOT_TOKEN=xxx \
   DISCORD_CLIENT_ID=xxx \
@@ -233,7 +254,106 @@ fly secrets set \
   TITO_SECRET=xxx
 ```
 
-`bouncer.yml` is gitignored. Mount it as a file or pass its contents as a secret on your Fly machine.
+**3. Upload `bouncer.yml`**
+
+Mount it as a Fly secret and write it to disk at boot, or use a Fly volume. The simplest approach is a base64-encoded secret:
+
+```bash
+fly secrets set BOUNCER_YML="$(base64 < bouncer.yml)"
+```
+
+Then add a startup wrapper in `fly.toml` that decodes it:
+
+```toml
+[processes]
+  worker = "sh -c 'echo $BOUNCER_YML | base64 -d > /app/bouncer.yml && ruby bot.rb'"
+```
+
+**4. Deploy**
+
+```bash
+fly deploy
+```
+
+---
+
+### Railway
+
+**1. Fork this repo** and connect it to a new Railway project.
+
+**2. Set environment variables** in the Railway dashboard:
+
+```
+DISCORD_BOT_TOKEN
+DISCORD_CLIENT_ID
+DISCORD_GUILD_ID
+TITO_SECRET
+```
+
+**3. Add `bouncer.yml` as a config file**
+
+In the Railway dashboard under **Variables**, add:
+
+```
+BOUNCER_CONFIG=/etc/bouncer/bouncer.yml
+```
+
+Then add a volume or use Railway's config file injection. The simplest approach is to base64-encode the config:
+
+```bash
+BOUNCER_YML_B64=$(base64 < bouncer.yml)
+```
+
+Set `BOUNCER_YML_B64` as a Railway variable, then use a `Procfile` startup command to decode it:
+
+```
+worker: sh -c 'echo $BOUNCER_YML_B64 | base64 -d > /app/bouncer.yml && ruby bot.rb'
+```
+
+Railway auto-detects the `Procfile` and runs the `worker` process.
+
+---
+
+### Render
+
+A `render.yaml` is included. It defines a background worker service using the Dockerfile.
+
+**1. Fork this repo** and connect it to Render.
+
+**2. Deploy**
+
+Render will detect `render.yaml` automatically. Fill in the secret environment variables in the Render dashboard:
+
+```
+DISCORD_BOT_TOKEN
+DISCORD_CLIENT_ID
+DISCORD_GUILD_ID
+TITO_SECRET
+```
+
+**3. Add `bouncer.yml`**
+
+In the Render dashboard, under **Secret Files**, add `bouncer.yml` mounted at `/etc/secrets/bouncer.yml`. The `render.yaml` already sets `BOUNCER_CONFIG` to point there.
+
+---
+
+### Docker
+
+Build and run locally or on any container host:
+
+```bash
+docker build -t bouncer .
+
+docker run -d \
+  -e DISCORD_BOT_TOKEN=xxx \
+  -e DISCORD_CLIENT_ID=xxx \
+  -e DISCORD_GUILD_ID=xxx \
+  -e TITO_SECRET=xxx \
+  -v $(pwd)/bouncer.yml:/app/bouncer.yml \
+  bouncer
+```
+
+The volume mount is the easiest way to get `bouncer.yml` into the container.
 
 ---
 

@@ -1,0 +1,20 @@
+services:
+  - type: worker
+    name: bouncer
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      - key: TITO_SECRET
+        sync: false
+      - key: BOUNCER_CONFIG
+        value: /etc/secrets/bouncer.yml
+    secretFiles:
+      - name: bouncer.yml
+        contents: |
+          # Paste your bouncer.yml contents here in the Render dashboard
