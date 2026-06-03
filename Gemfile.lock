@@ -1,3 +1,11 @@
+PATH
+  remote: .
+  specs:
+    bouncer (0.1.0)
+      discordrb (~> 3.5)
+      dotenv (~> 3.0)
+      rest-client (~> 2.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -43,9 +51,10 @@ PLATFORMS
   arm64-darwin-25
 
 DEPENDENCIES
-  discordrb
-  dotenv
-  rest-client
+  bouncer!
+
+RUBY VERSION
+   ruby 3.2.10p266
 
 BUNDLED WITH
    2.4.19

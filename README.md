@@ -55,7 +55,24 @@ $ /join_2027
 
 > **Important:** The bot's role must be positioned **above** any roles it manages in your server's role hierarchy.
 
-**2. Configure bouncer**
+**2. Add bouncer to your Gemfile**
+
+```ruby
+gem 'bouncer', github: 'joshdholtz/bouncer'
+```
+
+```bash
+bundle install
+```
+
+**3. Create a `bot.rb`**
+
+```ruby
+require 'bouncer'
+Bouncer.new.run
+```
+
+**4. Configure bouncer**
 
 ```bash
 cp bouncer.example.yml bouncer.yml
@@ -63,7 +80,7 @@ cp bouncer.example.yml bouncer.yml
 
 Fill in your Discord role IDs, Tito slug, and conference name.
 
-**3. Set environment variables**
+**5. Set environment variables**
 
 ```bash
 cp .env.example .env
@@ -76,10 +93,9 @@ DISCORD_GUILD_ID=your_guild_id
 TITO_SECRET=your_tito_api_token
 ```
 
-**4. Run**
+**6. Run**
 
 ```bash
-bundle install
 ruby bot.rb
 ```
 
@@ -416,23 +432,26 @@ bouncer handles ticket verification and role assignment. Everything else — tri
 
 ### Adding custom slash commands
 
-After `bot.run` setup in `bot.rb`, register and handle any additional commands using the discordrb API directly. bouncer's config loop runs first, then your custom code runs after.
+`Bouncer.new` returns a `Bot` instance. Call `bouncer.bot` to get the raw discordrb bot and register any additional commands before calling `bouncer.run`.
 
 **Example: a `/make_trip_2027` command that creates a channel**
 
 ```ruby
-# In your fork's bot.rb, after require_relative './helpers/tito'
+require 'bouncer'
+
+bouncer = Bouncer.new
 
 TRIPS_CATEGORY_ID = ENV.fetch("DISCORD_TRIPS_CATEGORY_ID_2027")
 
-bot.register_application_command(:make_trip_2027, "Create a trip or event channel", server_id: ENV.fetch("DISCORD_GUILD_ID")) do |cmd|
+bouncer.bot.register_application_command(:make_trip_2027, "Create a trip or event channel",
+  server_id: ENV.fetch("DISCORD_GUILD_ID")) do |cmd|
   cmd.string("type", "Trip or Event", required: true, choices: { Trip: "trip", Event: "event" })
   cmd.string("name", "Short channel name (e.g. millennium-park)", required: true)
   cmd.string("date_and_time", "When is it? (e.g. Sunday 4pm)", required: true)
   cmd.string("description", "What are you planning?", required: true)
 end
 
-bot.application_command(:make_trip_2027) do |event|
+bouncer.bot.application_command(:make_trip_2027) do |event|
   event.defer(ephemeral: true)
 
   type        = event.options["type"]
@@ -457,7 +476,9 @@ bot.application_command(:make_trip_2027) do |event|
 end
 ```
 
-Place this block in `bot.rb` before `bot.run`. The `COMMANDS` loop from bouncer core registers the `/join_*` commands; your custom blocks register everything else.
+Then call `bouncer.run` at the end. `Bouncer.new` registers all `/join_*` commands from `bouncer.yml`; your `bouncer.bot` blocks add everything else.
+
+See `example/bot.rb` in this repo for a full commented template.
 
 ---
 
