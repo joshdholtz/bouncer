@@ -93,3 +93,22 @@ commands:
 bouncer is a base. Conference-specific features (trip channel creation, custom slash commands, year-specific logic) belong in the fork, not here. Keep `bot.rb` and `helpers/` generic.
 
 See [deep-dish-discord-bot](https://github.com/joshdholtz/deep-dish-discord-bot) for a real fork.
+
+### Adding commands in a fork
+
+The `COMMANDS.each` loop in `bot.rb` handles all config-driven `/join_*` commands. To add a custom command (e.g. `/make_trip_2027`), add `register_application_command` + `application_command` blocks anywhere before `bot.run`:
+
+```ruby
+# fork's bot.rb — after bouncer's COMMANDS.each block
+
+bot.register_application_command(:make_trip_2027, "Create a trip channel", server_id: ENV.fetch("DISCORD_GUILD_ID")) do |cmd|
+  cmd.string("name", "Channel name", required: true)
+end
+
+bot.application_command(:make_trip_2027) do |event|
+  event.defer(ephemeral: true)
+  # your logic here
+end
+```
+
+Custom commands sit alongside bouncer's generated commands — Discord sees them all as slash commands on the same bot.

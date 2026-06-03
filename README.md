@@ -410,9 +410,54 @@ commands:
 
 ## Forking for Your Conference
 
-bouncer is designed to be forked. The core handles ticket verification and role assignment. Conference-specific features (trip channels, custom commands, year-specific logic) live in your fork.
+bouncer handles ticket verification and role assignment. Everything else — trip channels, custom slash commands, event-specific logic — lives in your fork.
 
 [Deep Dish Swift](https://deepdishswift.com) uses bouncer for their annual iOS conference Discord. Check out [deep-dish-discord-bot](https://github.com/joshdholtz/deep-dish-discord-bot) to see a fully configured fork.
+
+### Adding custom slash commands
+
+After `bot.run` setup in `bot.rb`, register and handle any additional commands using the discordrb API directly. bouncer's config loop runs first, then your custom code runs after.
+
+**Example: a `/make_trip_2027` command that creates a channel**
+
+```ruby
+# In your fork's bot.rb, after require_relative './helpers/tito'
+
+TRIPS_CATEGORY_ID = ENV.fetch("DISCORD_TRIPS_CATEGORY_ID_2027")
+
+bot.register_application_command(:make_trip_2027, "Create a trip or event channel", server_id: ENV.fetch("DISCORD_GUILD_ID")) do |cmd|
+  cmd.string("type", "Trip or Event", required: true, choices: { Trip: "trip", Event: "event" })
+  cmd.string("name", "Short channel name (e.g. millennium-park)", required: true)
+  cmd.string("date_and_time", "When is it? (e.g. Sunday 4pm)", required: true)
+  cmd.string("description", "What are you planning?", required: true)
+end
+
+bot.application_command(:make_trip_2027) do |event|
+  event.defer(ephemeral: true)
+
+  type        = event.options["type"]
+  name        = event.options["name"].downcase.gsub(/[^a-z0-9-]/, "-").squeeze("-")
+  date        = event.options["date_and_time"]
+  description = event.options["description"]
+
+  category = event.server.channels.find { |c| c.id.to_s == TRIPS_CATEGORY_ID }
+  unless category
+    event.edit_response(content: "Trips category not found. Contact an admin.")
+    next
+  end
+
+  channel = event.server.create_channel(
+    "#{type}-#{name}",
+    0,                          # text channel
+    topic: "#{date} — #{description}",
+    parent_id: category.id
+  )
+
+  event.edit_response(content: "Created <##{channel.id}>!")
+end
+```
+
+Place this block in `bot.rb` before `bot.run`. The `COMMANDS` loop from bouncer core registers the `/join_*` commands; your custom blocks register everything else.
 
 ---
 
