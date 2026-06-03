@@ -1,0 +1,33 @@
+{
+  "name": "bouncer",
+  "description": "Config-driven Discord bot for conference attendee verification",
+  "repository": "https://github.com/joshdholtz/bouncer",
+  "keywords": ["discord", "bot", "ruby", "conference"],
+  "env": {
+    "DISCORD_BOT_TOKEN": {
+      "description": "Discord bot token from the Developer Portal",
+      "required": true
+    },
+    "DISCORD_CLIENT_ID": {
+      "description": "Discord application client ID",
+      "required": true
+    },
+    "DISCORD_GUILD_ID": {
+      "description": "Discord server (guild) ID",
+      "required": true
+    },
+    "TITO_SECRET": {
+      "description": "Tito API token (required when using the tito provider)",
+      "required": false
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    { "url": "heroku/ruby" }
+  ]
+}

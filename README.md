@@ -4,6 +4,9 @@
 
 **Config-driven Discord bot for conference attendee verification.**
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/joshdholtz/bouncer)
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/joshdholtz/bouncer)
+
 </div>
 
 bouncer reads a YAML config file to register slash commands, verify tickets against a provider (like Tito), and assign Discord roles. Add a new year or event by adding a YAML block — no code changes needed.
@@ -234,6 +237,31 @@ bouncer is a long-running process with no HTTP server. Any platform that can run
 
 ---
 
+### Heroku
+
+Click the **Deploy to Heroku** button at the top of this README. It reads `app.json` and prompts you for all required environment variables in the browser.
+
+After deploy, SSH in and add `bouncer.yml`:
+
+```bash
+heroku run bash
+# paste your bouncer.yml contents, then exit
+```
+
+Or set a base64-encoded config var:
+
+```bash
+heroku config:set BOUNCER_YML_B64="$(base64 < bouncer.yml)"
+```
+
+And update your `Procfile` to decode it at startup:
+
+```
+worker: sh -c 'echo $BOUNCER_YML_B64 | base64 -d > /app/bouncer.yml && ruby bot.rb'
+```
+
+---
+
 ### Fly.io
 
 **1. Launch**
@@ -316,7 +344,7 @@ Railway auto-detects the `Procfile` and runs the `worker` process.
 
 ### Render
 
-A `render.yaml` is included. It defines a background worker service using the Dockerfile.
+Click the button at the top of this README, or go manually:
 
 **1. Fork this repo** and connect it to Render.
 
