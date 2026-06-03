@@ -14,7 +14,10 @@ services:
         sync: false
       - key: BOUNCER_CONFIG
         value: /etc/secrets/bouncer.yml
+      - key: BOUNCER_YML_B64
+        sync: false
     secretFiles:
       - name: bouncer.yml
         contents: |
           # Paste your bouncer.yml contents here in the Render dashboard
+    startCommand: sh -c 'if [ -n "$BOUNCER_YML_B64" ]; then echo "$BOUNCER_YML_B64" | base64 -d > /etc/secrets/bouncer.yml; fi && ruby bot.rb'

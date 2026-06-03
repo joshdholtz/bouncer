@@ -12,12 +12,12 @@ commands:
       year: "2027"
       # Map release title substrings to ticket types (case-insensitive)
       release_types:
-        stream: "Live Streaming"
-        speaker: "Speaker"
+        stream: "Live Streaming"    # release title substring → assigns stream role instead of default
+        speaker: "Speaker"          # special: sets is_speaker flag (additive, not a primary type)
     roles:
       default: "ATTENDEE_ROLE_ID"
-      stream: "STREAM_ROLE_ID"      # optional: assigned when ticket type is stream
-      speaker: "SPEAKER_ROLE_ID"   # optional: assigned when ticket is_speaker
+      stream: "STREAM_ROLE_ID"      # assigned when ticket type is stream
+      speaker: "SPEAKER_ROLE_ID"   # assigned in addition to primary role when is_speaker
 
   - name: join_2026
     description: "Join 2026 conference channels"

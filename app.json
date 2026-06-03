@@ -17,8 +17,12 @@
       "required": true
     },
     "TITO_SECRET": {
-      "description": "Tito API token (required when using the tito provider)",
-      "required": false
+      "description": "Tito API token",
+      "required": true
+    },
+    "BOUNCER_YML_B64": {
+      "description": "Base64-encoded contents of your bouncer.yml config file. Generate with: base64 < bouncer.yml",
+      "required": true
     }
   },
   "formation": {

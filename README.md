@@ -32,10 +32,12 @@ $ /join_2027
 - [Slash Commands](#slash-commands)
 - [Environment Variables](#environment-variables)
 - [Deploying](#deploying)
+  - [Heroku](#heroku)
   - [Fly.io](#flyio)
   - [Railway](#railway)
   - [Render](#render)
   - [Docker](#docker)
+- [Debugging](#debugging)
 - [Adding a New Year](#adding-a-new-year)
 - [Forking for Your Conference](#forking-for-your-conference)
 
@@ -48,7 +50,7 @@ $ /join_2027
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
 2. Create a new application → **Bot** tab → copy the token
 3. Enable **Privileged Gateway Intents**: Server Members, Message Content
-4. Under **OAuth2 → URL Generator**, select scope `bot` + `applications.commands` with permissions: `Manage Roles`, `Manage Channels`, `Send Messages`
+4. Under **OAuth2 → URL Generator**, select scope `bot` + `applications.commands` with permissions: `Manage Roles`, `Manage Channels`, `Send Messages`, `Manage Messages`
 5. Open the generated URL and invite the bot to your server
 
 > **Important:** The bot's role must be positioned **above** any roles it manages in your server's role hierarchy.
@@ -181,7 +183,7 @@ verify:
 | `year` | Tito event slug |
 | `release_types` | Map of type name → release title substring. The special key `speaker` sets an extra speaker role flag rather than changing the primary type. |
 
-The `ticket_reference` input accepts both `ABCD` and `ABCD-2` formats. If no `-N` suffix is provided, `-1` is appended automatically.
+The `ticket_reference` input accepts both `ABCD` and `ABCD-2` formats. If no `-N` suffix is provided, `-1` is appended automatically — `ABCD` becomes `ABCD-1`, but `ABCD-2` stays `ABCD-2`.
 
 ---
 
@@ -239,26 +241,15 @@ bouncer is a long-running process with no HTTP server. Any platform that can run
 
 ### Heroku
 
-Click the **Deploy to Heroku** button at the top of this README. It reads `app.json` and prompts you for all required environment variables in the browser.
+Click the **Deploy to Heroku** button at the top of this README. It reads `app.json` and prompts you for all required environment variables — including `BOUNCER_YML_B64`, which is your `bouncer.yml` encoded as base64.
 
-After deploy, SSH in and add `bouncer.yml`:
-
-```bash
-heroku run bash
-# paste your bouncer.yml contents, then exit
-```
-
-Or set a base64-encoded config var:
+Generate it before clicking deploy:
 
 ```bash
-heroku config:set BOUNCER_YML_B64="$(base64 < bouncer.yml)"
+base64 < bouncer.yml
 ```
 
-And update your `Procfile` to decode it at startup:
-
-```
-worker: sh -c 'echo $BOUNCER_YML_B64 | base64 -d > /app/bouncer.yml && ruby bot.rb'
-```
+Paste the output into the `BOUNCER_YML_B64` field. The `Procfile` automatically decodes it to `bouncer.yml` at startup.
 
 ---
 
@@ -284,18 +275,11 @@ fly secrets set \
 
 **3. Upload `bouncer.yml`**
 
-Mount it as a Fly secret and write it to disk at boot, or use a Fly volume. The simplest approach is a base64-encoded secret:
-
 ```bash
-fly secrets set BOUNCER_YML="$(base64 < bouncer.yml)"
+fly secrets set BOUNCER_YML_B64="$(base64 < bouncer.yml)"
 ```
 
-Then add a startup wrapper in `fly.toml` that decodes it:
-
-```toml
-[processes]
-  worker = "sh -c 'echo $BOUNCER_YML | base64 -d > /app/bouncer.yml && ruby bot.rb'"
-```
+Then uncomment the `[processes]` block in `fly.toml` (it's already there, commented out):
 
 **4. Deploy**
 
@@ -332,13 +316,7 @@ Then add a volume or use Railway's config file injection. The simplest approach 
 BOUNCER_YML_B64=$(base64 < bouncer.yml)
 ```
 
-Set `BOUNCER_YML_B64` as a Railway variable, then use a `Procfile` startup command to decode it:
-
-```
-worker: sh -c 'echo $BOUNCER_YML_B64 | base64 -d > /app/bouncer.yml && ruby bot.rb'
-```
-
-Railway auto-detects the `Procfile` and runs the `worker` process.
+Set `BOUNCER_YML_B64` as a Railway variable. The `Procfile` included in this repo automatically decodes it to `bouncer.yml` at startup — Railway detects `Procfile` and runs the `worker` process.
 
 ---
 
@@ -363,6 +341,8 @@ TITO_SECRET
 
 In the Render dashboard, under **Secret Files**, add `bouncer.yml` mounted at `/etc/secrets/bouncer.yml`. The `render.yaml` already sets `BOUNCER_CONFIG` to point there.
 
+Alternatively, set `BOUNCER_YML_B64` as an environment variable (base64-encoded config) and the startup command in `render.yaml` will decode it automatically.
+
 ---
 
 ### Docker
@@ -382,6 +362,26 @@ docker run -d \
 ```
 
 The volume mount is the easiest way to get `bouncer.yml` into the container.
+
+---
+
+## Debugging
+
+**Invalid ticket response** — check your bot's stdout logs. bouncer prints the Tito API URL for every lookup:
+
+```
+Tito lookup: https://api.tito.io/v3/my-conference/2027/tickets?...
+```
+
+If you see a Tito auth error, your `TITO_SECRET` is wrong or expired. If the URL looks right but returns no match, the email or reference doesn't match — confirm the attendee is searching by purchase email, not attendee email.
+
+**Role not found** — on startup, bouncer checks all role IDs in `bouncer.yml` against your server and prints a warning for any that don't exist:
+
+```
+WARNING: Role ID '123456789' (default) from command 'join_2027' not found on server
+```
+
+**Messages not auto-deleting** — make sure the bot has `Manage Messages` permission in your instructions channel. Check `#instructions` channel permissions and the bot's role in your server hierarchy.
 
 ---
 

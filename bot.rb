@@ -14,15 +14,31 @@ CODE_OF_CONDUCT_URL  = CONFIG.dig("conference", "code_of_conduct_url")
 INSTRUCTIONS_CHANNEL = CONFIG.dig("conference", "instructions_channel") || "instructions"
 COMMANDS             = CONFIG["commands"] || []
 
+%w[DISCORD_BOT_TOKEN DISCORD_CLIENT_ID DISCORD_GUILD_ID].each do |var|
+  abort "Missing required environment variable: #{var}" unless ENV[var]
+end
+
 bot = Discordrb::Bot.new(
-  token: ENV["DISCORD_BOT_TOKEN"],
-  client_id: ENV["DISCORD_CLIENT_ID"],
+  token: ENV.fetch("DISCORD_BOT_TOKEN"),
+  client_id: ENV.fetch("DISCORD_CLIENT_ID"),
   intents: [:servers, :server_members, :server_messages, :server_message_content]
 )
 
-bot.ready do
+bot.ready do |event|
   puts "Bot is ready! Running as: #{CONFERENCE_NAME}"
   puts "Commands: #{COMMANDS.map { |c| "/#{c["name"]}" }.join(", ")}"
+
+  server = event.bot.servers[ENV.fetch("DISCORD_GUILD_ID").to_i]
+  if server
+    COMMANDS.each do |cmd_cfg|
+      (cmd_cfg["roles"] || {}).each do |type, role_id|
+        next if role_id.nil? || role_id.to_s.start_with?("ROLE_ID", "ATTENDEE", "STREAM", "SPEAKER")
+        unless server.roles.any? { |r| r.id.to_s == role_id.to_s }
+          puts "WARNING: Role ID '#{role_id}' (#{type}) from command '#{cmd_cfg["name"]}' not found on server"
+        end
+      end
+    end
+  end
 end
 
 # Register and handle one slash command per config entry

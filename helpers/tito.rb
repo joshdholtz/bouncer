@@ -39,6 +39,15 @@ module Providers
         Result.new(type: type, extra: { is_speaker: is_speaker })
       rescue RestClient::NotFound
         nil
+      rescue RestClient::Unauthorized, RestClient::Forbidden => e
+        puts "Tito auth error: #{e.message}"
+        nil
+      rescue RestClient::Exception => e
+        puts "Tito API error (#{e.http_code}): #{e.message}"
+        nil
+      rescue StandardError => e
+        puts "Tito request failed: #{e.message}"
+        nil
       end
     end
   end

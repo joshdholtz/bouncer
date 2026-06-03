@@ -8,7 +8,17 @@ kill_timeout = '5s'
 [env]
   BOUNCER_CONFIG = '/app/bouncer.yml'
 
+# bouncer.yml is gitignored. Set BOUNCER_YML_B64 via:
+#   fly secrets set BOUNCER_YML_B64="$(base64 < bouncer.yml)"
+# then uncomment the [processes] block below.
+
+# [processes]
+#   worker = "sh -c 'echo $BOUNCER_YML_B64 | base64 -d > /app/bouncer.yml && ruby bot.rb'"
+
 [[vm]]
   memory = '256mb'
   cpu_kind = 'shared'
   cpus = 1
+
+[restart]
+  policy = 'always'
