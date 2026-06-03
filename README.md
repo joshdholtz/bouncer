@@ -4,6 +4,8 @@
 
 **Config-driven Discord bot for conference attendee verification.**
 
+[![CI](https://github.com/joshdholtz/bouncer/actions/workflows/ci.yml/badge.svg)](https://github.com/joshdholtz/bouncer/actions/workflows/ci.yml)
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/joshdholtz/bouncer)
 [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/joshdholtz/bouncer)
 

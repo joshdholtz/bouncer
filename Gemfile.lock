@@ -9,7 +9,13 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    addressable (2.9.0)
+      public_suffix (>= 2.0.2, < 8.0)
     base64 (0.3.0)
+    bigdecimal (4.1.2)
+    crack (1.0.1)
+      bigdecimal
+      rexml
     discordrb (3.7.2)
       base64 (~> 0.2)
       discordrb-webhooks (~> 3.7.2)
@@ -23,6 +29,7 @@ GEM
     dotenv (3.2.0)
     event_emitter (0.2.6)
     ffi (1.17.4-arm64-darwin)
+    hashdiff (1.2.1)
     http-accept (1.7.0)
     http-cookie (1.1.6)
       domain_name (~> 0.5)
@@ -31,15 +38,22 @@ GEM
       logger
       mime-types-data (~> 3.2025, >= 3.2025.0507)
     mime-types-data (3.2026.0414)
+    minitest (5.27.0)
     mutex_m (0.3.0)
     netrc (0.11.0)
     opus-ruby (1.0.1)
       ffi
+    public_suffix (7.0.5)
     rest-client (2.1.0)
       http-accept (>= 1.7.0, < 2.0)
       http-cookie (>= 1.0.2, < 2.0)
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
+    rexml (3.4.4)
+    webmock (3.26.2)
+      addressable (>= 2.8.0)
+      crack (>= 0.3.2)
+      hashdiff (>= 0.4.0, < 2.0.0)
     websocket (1.2.11)
     websocket-client-simple (0.9.0)
       base64
@@ -52,6 +66,8 @@ PLATFORMS
 
 DEPENDENCIES
   bouncer!
+  minitest (~> 5.0)
+  webmock (~> 3.0)
 
 RUBY VERSION
    ruby 3.2.10p266
